@@ -53,6 +53,8 @@ class Config:
             except ImportError as e:
                 log.warning("Failed to load %s entry point '%s': %s", PYLSP, entry_point.name, e)
                 self._pm.set_blocked(entry_point.name)
+            except pkg_resources.VersionConflict as e:
+                log.warning("Ignored failure to load %s entry point '%s': %s", PYLSP, entry_point.name, e)
 
         # Load the entry points into pluggy, having blocked any failing ones
         self._pm.load_setuptools_entrypoints(PYLSP)

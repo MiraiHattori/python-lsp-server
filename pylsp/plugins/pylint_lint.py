@@ -232,18 +232,39 @@ def _run_pylint_stdio(pylint_executable, document, flags):
     :rtype: string
     """
     log.debug("Calling %s with args: '%s'", pylint_executable, flags)
+    stdout = ''
+    stderr = ''
     try:
-        cmd = [pylint_executable]
-        cmd.extend(flags)
-        cmd.extend(['--from-stdin', document.path])
-        p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        import tempfile
+        import os
+        with tempfile.TemporaryDirectory() as dName:
+            fileBaseName = os.path.basename(document.path)
+            with open(os.path.join(dName, fileBaseName), 'wb') as tmpf:
+                tmpf.write(document.source.encode())
+                cmd = [pylint_executable]
+                cmd.extend(flags)
+                # mirai
+                # cmd.extend(['--from-stdin', document.path])
+                cmd.extend([fileBaseName])
+                log.error('[mirai] cwd=%s, cmd=%s', dName, cmd)
+                with Popen(cmd, cwd=dName, stdin=PIPE, stdout=PIPE, stderr=PIPE) as p:
+                    (stdout, stderr) = p.communicate()
     except IOError:
-        log.debug("Can't execute %s. Trying with 'python -m pylint'", pylint_executable)
-        cmd = ['python', '-m', 'pylint']
-        cmd.extend(flags)
-        cmd.extend(['--from-stdin', document.path])
-        p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)  # pylint: disable=consider-using-with
-    (stdout, stderr) = p.communicate(document.source.encode())
+        log.error("Can't execute %s. Trying with 'python -m pylint'", pylint_executable)
+        import tempfile
+        import os
+        with tempfile.TemporaryDirectory() as dName:
+            fileBaseName = os.path.basename(document.path)
+            with open(os.path.join(dName, fileBaseName), 'wb') as tmpf:
+                tmpf.write(document.source.encode())
+                cmd = ['python', '-m', 'pylint']
+                cmd.extend(flags)
+                # mirai
+                # cmd.extend(['--from-stdin', document.path])
+                cmd.extend([fileBaseName])
+                log.error('[mirai] cwd=%s, cmd=%s', dName, cmd)
+                with Popen(cmd, cwd=dName, stdin=PIPE, stdout=PIPE, stderr=PIPE) as p:
+                    (stdout, stderr) = p.communicate()
     if stderr:
         log.error("Error while running pylint '%s'", stderr.decode())
     return stdout.decode()
